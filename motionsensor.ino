@@ -1,23 +1,23 @@
-//code for HC-SR05 sensor,Led, and Arduino nano
-#define MOTION_SENSOR_PIN 2  // HC-SR505 output connected to pin 2
-#define LED_PIN 13           // External LED connected to pin 13
+// Define pins
+const int pirPin = 2;  // PIR motion sensor connected to digital pin 2
+const int ledPin = 3;  // LED connected to digital pin 3
 
 void setup() {
-    pinMode(MOTION_SENSOR_PIN, INPUT);  // Set motion sensor as input
-    pinMode(LED_PIN, OUTPUT);           // Set external LED as output
-    Serial.begin(9600);                 // Start serial communication
+    pinMode(pirPin, INPUT);  // Set PIR sensor as input
+    pinMode(ledPin, OUTPUT); // Set LED as output
+    Serial.begin(9600);      // Start serial communication for debugging
 }
 
 void loop() {
-    int motionStatus = digitalRead(MOTION_SENSOR_PIN);  // Read sensor value
-
-    if (motionStatus == HIGH) {
-        digitalWrite(LED_PIN, HIGH);   // Turn on LED when motion is detected
+    int motionDetected = digitalRead(pirPin); // Read PIR sensor state
+    
+    if (motionDetected == HIGH) { // If motion is detected
+        digitalWrite(ledPin, HIGH); // Turn on LED
         Serial.println("Motion detected! LED ON");
     } else {
-        digitalWrite(LED_PIN, LOW);    // Turn off LED when no motion
+        digitalWrite(ledPin, LOW); // Turn off LED
         Serial.println("No motion. LED OFF");
     }
-
-    delay(500);  // Short delay for stability
+    
+    delay(100); // Small delay to avoid rapid changes
 }
