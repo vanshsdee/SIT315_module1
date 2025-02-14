@@ -1,0 +1,76 @@
+// Pin constants 
+const int pirPin = 2;     // PIR sensor pin
+const int ledPin = 3;     // LED pin
+const int buttonPin = 4;  // Button pin (Interrupt)
+const int tempPin = A0;   // Temperature sensor pin (TMP36)
+
+volatile bool motionDetected = false;  // Flag for motion detection
+bool ledState = false;                 // Tracks LED state
+bool tempBlinkFlag = false;            // Prevents continuous blinking
+unsigned long motionStartTime = 0;     // Stores time when motion is detected
+
+void motionISR() {
+    motionDetected = true; // Interrupt triggered when motion is detected
+}
+
+void buttonISR() {
+    ledState = false;  // Turn off LED immediately
+    digitalWrite(ledPin, LOW);
+    Serial.println("Button pressed! LED OFF");
+}
+
+void setup() {
+    pinMode(pirPin, INPUT);
+    pinMode(buttonPin, INPUT_PULLUP);
+    pinMode(ledPin, OUTPUT);
+    Serial.begin(9600);
+
+    // Attach interrupts
+    attachInterrupt(digitalPinToInterrupt(pirPin), motionISR, RISING);
+    attachInterrupt(digitalPinToInterrupt(buttonPin), buttonISR, FALLING);
+}
+
+void loop() {
+    // Read temperature sensor value
+    int tempValue = analogRead(tempPin);
+    float temperature = (tempValue * 5.0 / 1023.0) * 100.0;  // Convert to Celsius
+    Serial.print("Temperature: ");
+    Serial.print(temperature);
+    Serial.println(" °C");
+
+    // If motion is detected, turn on the LED for 5 seconds
+    if (motionDetected) {
+        ledState = true;
+        digitalWrite(ledPin, HIGH);
+        Serial.println("Motion detected! LED ON");
+        motionStartTime = millis();
+        motionDetected = false;
+    }
+
+    // If LED is ON, turn OFF after 5 seconds
+    if (ledState && (millis() - motionStartTime >= 5000)) {
+        ledState = false;
+        digitalWrite(ledPin, LOW);
+        Serial.println("LED OFF after timeout");
+    }
+
+    // If temperature exceeds 30°C and it has not already triggered the blink
+    if (temperature > 30.0 && !tempBlinkFlag) {
+        Serial.println("High Temperature Detected! Blinking LED...");
+        for (int i = 0; i < 3; i++) {
+            digitalWrite(ledPin, HIGH);
+            delay(300);
+            digitalWrite(ledPin, LOW);
+            delay(300);
+        }
+        tempBlinkFlag = true;  // Set flag so it doesn't keep blinking
+    }
+
+    // Reset flag when temperature drops below 29°C 
+    if (temperature < 29.0 && tempBlinkFlag) {
+        tempBlinkFlag = false;
+        Serial.println("Temperature dropped below 29°C, ready to blink again.");
+    }
+
+    delay(500);  
+}
