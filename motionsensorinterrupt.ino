@@ -1,49 +1,38 @@
-// Define pins
-const int pirPin = 2;     
-const int ledPin = 3;     
-const int buttonPin = 4;  
+const int pirPin = 2;       // PIR sensor pin
+const int ledPin = 13;      // LED pin
+const int switchPin = 3;    // Switch pin (interrupt)
 
-volatile bool motionDetected = false;   // Flag for motion detection
-bool ledState = false;                  // Tracks LED state
-unsigned long motionStartTime = 0;      // Stores time when motion is detected
-
-void motionISR() {
-    motionDetected = true; // Interrupt triggered when motion is detected
-}
+volatile bool ledOverride = false;
 
 void setup() {
-    pinMode(pirPin, INPUT);     
-    pinMode(buttonPin, INPUT_PULLUP); 
-    pinMode(ledPin, OUTPUT);   
-    Serial.begin(9600);      
+  pinMode(pirPin, INPUT);
+  pinMode(ledPin, OUTPUT);
+  pinMode(switchPin, INPUT_PULLUP);  // Use internal pull-up resistor
 
-    // Attach interrupt: Interrupt on RISING edge (motion detected)
-    attachInterrupt(digitalPinToInterrupt(pirPin), motionISR, RISING);
+  attachInterrupt(digitalPinToInterrupt(switchPin), turnOffLED, FALLING); // Interrupt on button press
+
+  Serial.begin(9600);
 }
 
 void loop() {
-    // If motion is detected, turn on the LED for 5sec
-    if (motionDetected) {
-        ledState = true;  // LED ON
-        digitalWrite(ledPin, HIGH);
-        Serial.println("Motion detected! LED ON");
-        motionStartTime = millis();  // Record time
-        motionDetected = false;  // Reset motion flag
+  if (digitalRead(pirPin) == HIGH) {
+    Serial.println("Motion detected!");
+    ledOverride = false;               // Reset override flag
+    digitalWrite(ledPin, HIGH);        // Turn LED on
+
+    unsigned long startTime = millis();
+    while (millis() - startTime < 5000) { // Keep LED on for 5 seconds
+      if (ledOverride) {
+        Serial.println("LED turned off by switch.");
+        break;
+      }
     }
 
-    // Interrupttion- If LED is ON due to motion, turn OFF when button is pressed
-    if (ledState && (millis() - motionStartTime < 5000)) 
-    {
-        if (digitalRead(buttonPin) == LOW) {  
-            while (digitalRead(buttonPin) == LOW);  
-            ledState = false;  // Turn off LED
-            digitalWrite(ledPin, LOW);
-        }
-    }
-    // After 5 seconds, automatically turn off LED 
-    else if (ledState && (millis() - motionStartTime >= 5000)) 
-    {
-        ledState = false;
-        digitalWrite(ledPin, LOW);
-    }
+    digitalWrite(ledPin, LOW);         // Turn LED off after 5 seconds or override
+  }
+}
+
+// Interrupt Service Routine
+void turnOffLED() {
+  ledOverride = true;
 }
